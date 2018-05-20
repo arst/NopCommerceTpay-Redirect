@@ -45,8 +45,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Controllers\TpayPaymentController.cs" />
+    <Compile Include="Infrastructure\MD5HashManager.cs" />
     <Compile Include="Model\ConfigurationViewModel.cs" />
-    <Compile Include="Model\TPayNotification.cs" />
+    <Compile Include="Integration\Model\TPayNotification.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RouteProvider.cs" />
     <Compile Include="TPayPaymentProcessor.cs" />
