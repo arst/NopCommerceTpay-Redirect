@@ -19,6 +19,8 @@ using System.Web.Routing;
 using System.Text;
 using System.Net.Http;
 using Nop.Plugin.Payments.TPay;
+using IO.Swagger.Api;
+using IO.Swagger.Model;
 
 namespace Nop.Plugin.Payments.TPay
 {
@@ -131,7 +133,8 @@ namespace Nop.Plugin.Payments.TPay
         public ProcessPaymentResult ProcessPayment(ProcessPaymentRequest processPaymentRequest)
         {
             ProcessPaymentResult result = new ProcessPaymentResult();
-            result.NewPaymentStatus = Core.Domain.Payments.PaymentStatus.Pending;
+            CardsAPIApi api = new CardsAPIApi();
+            //result.NewPaymentStatus = Core.Domain.Payments.PaymentStatus.Pending;
             return result;
         }
 

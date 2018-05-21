@@ -7,7 +7,6 @@ using System.Web.Mvc;
 using Nop.Core;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Payments;
-using Nop.Plugin.Payments.TPay.Integration.Model;
 using Nop.Plugin.Payments.TPay.Models;
 using Nop.Services.Configuration;
 using Nop.Services.Logging;
@@ -95,8 +94,9 @@ namespace Nop.Plugin.Payments.TPay.Controllers
 
 
         [ValidateInput(false)]
-        public async Task<string> Return(TPayNotification notification)
+        public async Task<string> Return(/*PayNotification notification*/)
         {
+            /*
             TPayPaymentProcessor processor = this.paymentService.LoadPaymentMethodBySystemName("Payments.TPay") as TPayPaymentProcessor;
             if (processor == null || 
                 !PaymentExtensions.IsPaymentMethodActive(processor, this.paymentSettings) || 
@@ -125,7 +125,7 @@ namespace Nop.Plugin.Payments.TPay.Controllers
                     this.orderProcessingService.CancelOrder(order, true);
                 }
             }
-
+            */
             return "TRUE";
         }
     }

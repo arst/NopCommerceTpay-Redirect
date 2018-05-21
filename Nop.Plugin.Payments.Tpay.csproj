@@ -30,8 +30,16 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="RestSharp, Version=105.2.3.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\RestSharp.105.2.3\lib\net46\RestSharp.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Mvc, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\..\packages\Microsoft.AspNet.Mvc.5.2.3\lib\net45\System.Web.Mvc.dll</HintPath>
@@ -44,10 +52,110 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Integration\Api\CardsAPIApi.cs" />
+    <Compile Include="Integration\Api\MasspaymentsApi.cs" />
+    <Compile Include="Integration\Api\RegistrationApi.cs" />
+    <Compile Include="Integration\Api\TransactionAPIApi.cs" />
+    <Compile Include="Integration\Client\ApiClient.cs" />
+    <Compile Include="Integration\Client\ApiException.cs" />
+    <Compile Include="Integration\Client\ApiResponse.cs" />
+    <Compile Include="Integration\Client\Configuration.cs" />
+    <Compile Include="Integration\Client\ExceptionFactory.cs" />
+    <Compile Include="Integration\Client\GlobalConfiguration.cs" />
+    <Compile Include="Integration\Client\IApiAccessor.cs" />
+    <Compile Include="Integration\Client\IReadableConfiguration.cs" />
+    <Compile Include="Integration\Client\SwaggerDateConverter.cs" />
     <Compile Include="Controllers\TpayPaymentController.cs" />
     <Compile Include="Infrastructure\MD5HashManager.cs" />
+    <Compile Include="Integration\Model\Address.cs" />
+    <Compile Include="Integration\Model\Amount.cs" />
+    <Compile Include="Integration\Model\ApiDataObject.cs" />
+    <Compile Include="Integration\Model\ApiPassword.cs" />
+    <Compile Include="Integration\Model\BlikAlias.cs" />
+    <Compile Include="Integration\Model\BlikAliasResponse.cs" />
+    <Compile Include="Integration\Model\BlikFields.cs" />
+    <Compile Include="Integration\Model\BlikResponse.cs" />
+    <Compile Include="Integration\Model\BranchObject.cs" />
+    <Compile Include="Integration\Model\CardApiPassword.cs" />
+    <Compile Include="Integration\Model\CardsErrCode.cs" />
+    <Compile Include="Integration\Model\CardsErrDesc.cs" />
+    <Compile Include="Integration\Model\CardsRejectionReason.cs" />
+    <Compile Include="Integration\Model\CheckFields.cs" />
+    <Compile Include="Integration\Model\CheckResponse.cs" />
+    <Compile Include="Integration\Model\City.cs" />
+    <Compile Include="Integration\Model\CliAuth.cs" />
+    <Compile Include="Integration\Model\Code.cs" />
     <Compile Include="Model\ConfigurationViewModel.cs" />
-    <Compile Include="Integration\Model\TPayNotification.cs" />
+    <Compile Include="Integration\Model\Country.cs" />
+    <Compile Include="Integration\Model\CreateFields.cs" />
+    <Compile Include="Integration\Model\CreateResponse.cs" />
+    <Compile Include="Integration\Model\Currency.cs" />
+    <Compile Include="Integration\Model\Date.cs" />
+    <Compile Include="Integration\Model\DeregisterFields.cs" />
+    <Compile Include="Integration\Model\Desc.cs" />
+    <Compile Include="Integration\Model\Email.cs" />
+    <Compile Include="Integration\Model\GetFields.cs" />
+    <Compile Include="Integration\Model\GetResponse.cs" />
+    <Compile Include="Integration\Model\InlineResponse200.cs" />
+    <Compile Include="Integration\Model\Language.cs" />
+    <Compile Include="Integration\Model\LegalFormObject.cs" />
+    <Compile Include="Integration\Model\MasspaymentAuthorizeFields.cs" />
+    <Compile Include="Integration\Model\MasspaymentAuthorizeResponse.cs" />
+    <Compile Include="Integration\Model\MasspaymentCreateFields.cs" />
+    <Compile Include="Integration\Model\MasspaymentCreateResponse.cs" />
+    <Compile Include="Integration\Model\MasspaymentErrCode.cs" />
+    <Compile Include="Integration\Model\MasspaymentErrDesc.cs" />
+    <Compile Include="Integration\Model\MasspaymentPacksFields.cs" />
+    <Compile Include="Integration\Model\MasspaymentPacksResponse.cs" />
+    <Compile Include="Integration\Model\MasspaymentTransfersFields.cs" />
+    <Compile Include="Integration\Model\MasspaymentTransfersResponse.cs" />
+    <Compile Include="Integration\Model\Name.cs" />
+    <Compile Include="Integration\Model\Onetimer.cs" />
+    <Compile Include="Integration\Model\OrderId.cs" />
+    <Compile Include="Integration\Model\PackId.cs" />
+    <Compile Include="Integration\Model\PacksObject.cs" />
+    <Compile Include="Integration\Model\Phone.cs" />
+    <Compile Include="Integration\Model\PowUrl.cs" />
+    <Compile Include="Integration\Model\PowUrlBlad.cs" />
+    <Compile Include="Integration\Model\PresaleFields.cs" />
+    <Compile Include="Integration\Model\RefundAnyFields.cs" />
+    <Compile Include="Integration\Model\RefundAnyResponse.cs" />
+    <Compile Include="Integration\Model\RefundFields.cs" />
+    <Compile Include="Integration\Model\RefundResponse.cs" />
+    <Compile Include="Integration\Model\RefundTransactionFields.cs" />
+    <Compile Include="Integration\Model\RegisterFields.cs" />
+    <Compile Include="Integration\Model\RegisterSaleFields.cs" />
+    <Compile Include="Integration\Model\RegisterSaleResponse.cs" />
+    <Compile Include="Integration\Model\RegistrationApiPassword.cs" />
+    <Compile Include="Integration\Model\RegistrationErrCodes.cs" />
+    <Compile Include="Integration\Model\RegistrationErrDesc.cs" />
+    <Compile Include="Integration\Model\RegistrationInputFields.cs" />
+    <Compile Include="Integration\Model\RegistrationInputsResponse.cs" />
+    <Compile Include="Integration\Model\RegistrationRegisterResponse.cs" />
+    <Compile Include="Integration\Model\RegWrongParameters.cs" />
+    <Compile Include="Integration\Model\ReportFields.cs" />
+    <Compile Include="Integration\Model\ReportResponse.cs" />
+    <Compile Include="Integration\Model\Result.cs" />
+    <Compile Include="Integration\Model\SaleAuth.cs" />
+    <Compile Include="Integration\Model\SaleFields.cs" />
+    <Compile Include="Integration\Model\SaleResponse.cs" />
+    <Compile Include="Integration\Model\SecuresaleFields.cs" />
+    <Compile Include="Integration\Model\SecuresaleResponse.cs" />
+    <Compile Include="Integration\Model\SellerDataObject.cs" />
+    <Compile Include="Integration\Model\Title.cs" />
+    <Compile Include="Integration\Model\TransactionErrorCodes.cs" />
+    <Compile Include="Integration\Model\TransfersObject.cs" />
+    <Compile Include="Integration\Model\VcFinishFields.cs" />
+    <Compile Include="Integration\Model\VcFinishRequestExample.cs" />
+    <Compile Include="Integration\Model\VcFinishRequestExampleInner.cs" />
+    <Compile Include="Integration\Model\VcFinishRequestExampleInnerPartialShippingAddress.cs" />
+    <Compile Include="Integration\Model\VcFinishRequestExampleInnerPaymentRequest.cs" />
+    <Compile Include="Integration\Model\VcFinishRequestExampleInnerRiskData.cs" />
+    <Compile Include="Integration\Model\VcPrepareFields.cs" />
+    <Compile Include="Integration\Model\VcPrepareResponse.cs" />
+    <Compile Include="Integration\Model\VcPrepareResponseExample.cs" />
+    <Compile Include="Integration\Model\VcPrepareResponseExampleInner.cs" />
+    <Compile Include="Integration\Model\VcPrepareResponseExampleInnerUserData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RouteProvider.cs" />
     <Compile Include="TPayPaymentProcessor.cs" />
