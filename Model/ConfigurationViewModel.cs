@@ -33,5 +33,46 @@ namespace Nop.Plugin.Payments.TPay.Models
             get;
             set;
         }
+
+        [NopResourceDisplayName("Plugins.Payments.TPay.ApiPassword")]
+        public string ApiPassword
+        {
+            get;
+            set;
+        }
+
+        [NopResourceDisplayName("Plugins.Payments.TPay.ResultEmail")]
+        public string ResultEmail
+        {
+            get;
+            set;
+        }
+
+        [NopResourceDisplayName("Plugins.Payments.TPay.ReturnErrorUrl")]
+        public string ReturnErrorUrl
+        {
+            get;
+            set;
+        }
+
+        [NopResourceDisplayName("Plugins.Payments.TPay.ReturnUrl")]
+        public string ReturnUrl
+        {
+            get;
+            set;
+        }
+
+        [NopResourceDisplayName("Plugins.Payments.TPay.ApiKey")]
+        public string ApiKey
+        {
+            get;
+            set;
+        }
+
+        public string Language
+        {
+            get;
+            set;
+        }
     }
 }

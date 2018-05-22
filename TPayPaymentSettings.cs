@@ -1,13 +1,8 @@
 ﻿using Nop.Core.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Nop.Plugin.Payments.TPay
 {
-    public class TPayPaymentSettings : ISettings
+    public class TpayPaymentSettings : ISettings
     {
         public int MerchantID
         {
@@ -28,6 +23,42 @@ namespace Nop.Plugin.Payments.TPay
         }
 
         public int AdditionalFee
+        {
+            get;
+            set;
+        }
+
+        public string Language
+        {
+            get;
+            set;
+        }
+
+        public string ApiPassword
+        {
+            get;
+            set;
+        }
+
+        public string ResultEmail
+        {
+            get;
+            set;
+        }
+
+        public string ReturnErrorUrl
+        {
+            get;
+            set;
+        }
+
+        public string ReturnUrl
+        {
+            get;
+            set;
+        }
+
+        public string ApiKey
         {
             get;
             set;
