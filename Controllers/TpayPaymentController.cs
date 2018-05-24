@@ -114,50 +114,65 @@ namespace Nop.Plugin.Payments.TPay.Controllers
         [ValidateInput(false)]
         public string Return(TpayNotification notification)
         {
-            if(!this.availableIPsTable.Contains(Request.UserHostAddress) ||
-                !notification.Md5Sum.Equals(GenerateCheckSum(notification), StringComparison.OrdinalIgnoreCase))
-            {
-                throw new Exception("Unauthorized");
-            }
+            string errorMessage = string.Empty;
+            var isNotificationValid = !this.availableIPsTable.Contains(Request.UserHostAddress) ||
+                !notification.Md5Sum.Equals(GenerateCheckSum(notification), StringComparison.OrdinalIgnoreCase);
 
-            TpayPaymentProcessor processor = paymentService.LoadPaymentMethodBySystemName("Payments.TPay") as TpayPaymentProcessor;
-            
-            if (processor == null || 
-                !processor.IsPaymentMethodActive(paymentSettings) || 
-                !processor.PluginDescriptor.Installed)
+            if(isNotificationValid)
             {
-                throw new NopException("TPay payments module cannot be loaded");
-            }
-            int localOrderNumber = Convert.ToInt32(notification.TrCrc);
-            Order order = orderService.GetOrderById(localOrderNumber);
-            
-            if (notification.TrStatus.Equals(TpayTransactionStatus.Success, StringComparison.OrdinalIgnoreCase))
-            {
-                if (orderProcessingService.CanMarkOrderAsPaid(order))
+                TpayPaymentProcessor processor = paymentService.LoadPaymentMethodBySystemName("Payments.TPay") as TpayPaymentProcessor;
+                var isTpayPaymentProcessorEnabled = processor == null || 
+                    !processor.IsPaymentMethodActive(paymentSettings) || 
+                    !processor.PluginDescriptor.Installed;
+
+                if (isTpayPaymentProcessorEnabled)
                 {
-                    order.CapturedTransactionId = notification.TranId;
-                    orderService.UpdateOrder(order);
-                    orderProcessingService.MarkOrderAsPaid(order);
+                    int localOrderNumber = Convert.ToInt32(notification.TrCrc);
+                    Order order = orderService.GetOrderById(localOrderNumber);
+                    var isSuccessfullTransaction = 
+                        notification.TrStatus.Equals(TpayTransactionStatus.Success, StringComparison.OrdinalIgnoreCase) && 
+                        !notification.TrError.Equals(TpayTransactionStatus.Absent, StringComparison.OrdinalIgnoreCase);
+                    
+                    if (isSuccessfullTransaction)
+                    {
+                        if (orderProcessingService.CanMarkOrderAsPaid(order))
+                        {
+                            order.CapturedTransactionId = notification.TranId;
+                            orderService.UpdateOrder(order);
+                            orderProcessingService.MarkOrderAsPaid(order);
+
+                            return TpayTransactionStatus.Success;
+                        }
+                    }
+                    else
+                    {
+                        order.CapturedTransactionIdResult = notification.TrError;
+                        orderService.UpdateOrder(order);
+                    }
+                    return TpayTransactionStatus.Success;
+                } 
+                else
+                {
+                    errorMessage = "TPay processor disabled";
                 }
+                
             }
             else
             {
-
-                if (orderProcessingService.CanCancelOrder(order))
-                {
-                    order.CapturedTransactionId = notification.TranId;
-                    order.CapturedTransactionIdResult = notification.TrError;
-                    orderService.UpdateOrder(order);
-                    orderProcessingService.CancelOrder(order, true);
-                }
+                errorMessage = "Invalid request";
             }
             
-            return TpayTransactionStatus.Success;
+            return GenerateErrorResponse(errorMessage);
         }
 
         private string GenerateCheckSum(TpayNotification notification)
         {
             return MD5HashManager.GetMd5Hash($"{paymentSettings.MerchantId}{notification.TranId}{notification.TrAmount}{notification.TrCrc}{paymentSettings.MerchantSecret}");
+        }
+
+        private string GenerateErrorResponse(string message)
+        {
+            return $"{TpayTransactionStatus.Error} - {message}";
         }
     }
 }
