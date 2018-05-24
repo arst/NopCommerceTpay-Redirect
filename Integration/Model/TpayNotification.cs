@@ -17,6 +17,9 @@ namespace Nop.Plugin.Payments.Tpay.Integration.Model
         [JsonProperty("tr_crc")]
         public string TrCrc { get; set; }
 
+        [JsonProperty("tr_amount")]
+        public string TrAmount { get; set; }
+
         [JsonProperty("tr_paid")]
         public string TrPaid { get; set; }
 

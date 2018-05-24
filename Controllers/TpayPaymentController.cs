@@ -114,12 +114,14 @@ namespace Nop.Plugin.Payments.TPay.Controllers
         [ValidateInput(false)]
         public string Return(TpayNotification notification)
         {
-            if(!this.availableIPsTable.Contains(Request.UserHostAddress))
+            if(!this.availableIPsTable.Contains(Request.UserHostAddress) ||
+                !notification.Md5Sum.Equals(GenerateCheckSum(notification), StringComparison.OrdinalIgnoreCase))
             {
                 throw new Exception("Unauthorized");
             }
 
             TpayPaymentProcessor processor = paymentService.LoadPaymentMethodBySystemName("Payments.TPay") as TpayPaymentProcessor;
+            
             if (processor == null || 
                 !processor.IsPaymentMethodActive(paymentSettings) || 
                 !processor.PluginDescriptor.Installed)
@@ -151,6 +153,11 @@ namespace Nop.Plugin.Payments.TPay.Controllers
             }
             
             return TpayTransactionStatus.Success;
+        }
+
+        private string GenerateCheckSum(TpayNotification notification)
+        {
+            return MD5HashManager.GetMd5Hash($"{paymentSettings.MerchantId}{notification.TranId}{notification.TrAmount}{notification.TrCrc}{paymentSettings.MerchantSecret}");
         }
     }
 }
