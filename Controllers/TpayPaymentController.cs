@@ -123,8 +123,6 @@ namespace Nop.Plugin.Payments.TPay.Controllers
                 
                 if (IsSuccessfullTransaction(notification) && orderProcessingService.CanMarkOrderAsPaid(order))
                 {
-                    order.CapturedTransactionId = notification.TranId;
-                    orderService.UpdateOrder(order);
                     orderProcessingService.MarkOrderAsPaid(order);
                 }
                 else
