@@ -116,8 +116,7 @@ namespace Nop.Plugin.Payments.TPay.Controllers
         {
             if(!this.availableIPsTable.Contains(Request.UserHostAddress))
             {
-                var responseMessage = new HttpResponseMessage(HttpStatusCode.Unauthorized) { ReasonPhrase = "Unauthorized" };
-                throw new HttpResponseException(responseMessage);
+                throw new Exception("Unauthorized");
             }
 
             TpayPaymentProcessor processor = paymentService.LoadPaymentMethodBySystemName("Payments.TPay") as TpayPaymentProcessor;
