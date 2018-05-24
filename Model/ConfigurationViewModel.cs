@@ -74,5 +74,12 @@ namespace Nop.Plugin.Payments.TPay.Models
             get;
             set;
         }
+
+        [NopResourceDisplayName("Plugins.Payments.TPay.NotifierIPs")]
+        public string TPayNotifierIPs
+        {
+            get;
+            set;
+        }
     }
 }

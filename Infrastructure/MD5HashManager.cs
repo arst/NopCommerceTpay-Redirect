@@ -23,14 +23,18 @@ namespace Nop.Plugin.Payments.Tpay.Infrastructure
 
         internal static string GetMd5Hash(MD5 md5Hash, string input)
         {
-            byte[] data = md5Hash.ComputeHash(Encoding.UTF8.GetBytes(input));
-            StringBuilder sBuilder = new StringBuilder();
-
-            for (int i = 0; i < data.Length; i++)
+            using (var md5 = MD5.Create())
             {
-                sBuilder.Append(data[i].ToString("x2"));
+                byte[] inputBytes = Encoding.UTF8.GetBytes(input);
+                byte[] hashBytes = md5.ComputeHash(inputBytes);
+
+                StringBuilder sb = new StringBuilder();
+                foreach (var hashedByte in hashBytes)
+                {
+                    sb.Append(hashedByte.ToString("x2"));
+                }
+                return sb.ToString();
             }
-            return sBuilder.ToString();
         }
     }
 }

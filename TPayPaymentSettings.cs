@@ -63,5 +63,11 @@ namespace Nop.Plugin.Payments.TPay
             get;
             set;
         }
+
+        public string TPayNotifierIPs
+        {
+            get;
+            set;
+        }
     }
 }

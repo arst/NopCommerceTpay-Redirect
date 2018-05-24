@@ -17,6 +17,8 @@ namespace Nop.Plugin.Payments.TPay.Controllers
     [SuppressMessage("ReSharper", "Mvc.ViewNotResolved")]
     public class TpayPaymentController : BasePaymentController
     {
+        private const string configurationViewPath = "~/Plugins/Payments.TPay/Views/Configure.cshtml";
+
         private readonly ISettingService settingService;
 
         private readonly IPaymentService paymentService;
@@ -29,6 +31,10 @@ namespace Nop.Plugin.Payments.TPay.Controllers
 
         private readonly PaymentSettings paymentSettings;
 
+        private readonly HashSet<string> availableIPsTable;
+
+        private 
+
         public TpayPaymentController(ISettingService settingService, IPaymentService paymentService, IOrderService orderService, IOrderProcessingService orderProcessingService, TpayPaymentSettings tPayPaymentSettings, PaymentSettings paymentSettings)
         {
             this.settingService = settingService;
@@ -37,6 +43,7 @@ namespace Nop.Plugin.Payments.TPay.Controllers
             this.orderProcessingService = orderProcessingService;
             this.tPayPaymentSettings = tPayPaymentSettings;
             this.paymentSettings = paymentSettings;
+            this.availableIPsTable = String.IsNullOrEmpty(tPayPaymentSettings.TPayNotifierIPs) ? new HashSet<string>() : new HashSet(tPayPaymentSettings.TPayNotifierIPs.Split(","));
         }
 
         [AdminAuthorize, ChildActionOnly]
@@ -53,8 +60,9 @@ namespace Nop.Plugin.Payments.TPay.Controllers
             model.ReturnErrorUrl = tPayPaymentSettings.ReturnErrorUrl;
             model.ReturnUrl = tPayPaymentSettings.ReturnUrl;
             model.Language = tPayPaymentSettings.Language;
+            model.TPayNotifierIPs = tPayPaymentSettings.TPayNotifierIPs;
 
-            return View("~/Plugins/Payments.TPay/Views/Configure.cshtml", model);
+            return View(configurationViewPath, model);
         }
 
         [AdminAuthorize, ChildActionOnly, HttpPost]
@@ -77,8 +85,9 @@ namespace Nop.Plugin.Payments.TPay.Controllers
                 tPayPaymentSettings.ReturnErrorUrl = model.ReturnErrorUrl;
                 tPayPaymentSettings.ReturnUrl = model.ReturnUrl;
                 tPayPaymentSettings.Language = model.Language;
+                tPayPaymentSettings.TPayNotifierIPs = model.TPayNotifierIPs;
                 settingService.SaveSetting(tPayPaymentSettings);
-                result = View("~/Plugins/Payments.TPay/Views/Configure.cshtml", model);
+                result = View(configurationViewPath, model);
             }
             return result;
         }
@@ -86,7 +95,7 @@ namespace Nop.Plugin.Payments.TPay.Controllers
         [ChildActionOnly]
         public ActionResult PaymentInfo()
         {
-            return View("~/Plugins/Payments.TPay/Views/PaymentInfo.cshtml");
+            return View(configurationViewPath);
         }
 
         [NonAction]
@@ -105,6 +114,12 @@ namespace Nop.Plugin.Payments.TPay.Controllers
         [ValidateInput(false)]
         public string Return(TpayNotification notification)
         {
+            if(!this.availableIPsTable.Contains(Request.UserHostAddress))
+            {
+                var responseMessage = new HttpResponseMessage(HttpStatusCode.Unauthorized) { ReasonPhrase = "Unauthorized" };
+                throw new HttpResponseException(responseMessage);
+            }
+
             TpayPaymentProcessor processor = paymentService.LoadPaymentMethodBySystemName("Payments.TPay") as TpayPaymentProcessor;
             if (processor == null || 
                 !processor.IsPaymentMethodActive(paymentSettings) || 
@@ -114,27 +129,29 @@ namespace Nop.Plugin.Payments.TPay.Controllers
             }
             int localOrderNumber = Convert.ToInt32(notification.TrCrc);
             Order order = orderService.GetOrderById(localOrderNumber);
-            if (notification.TrStatus.Equals("TRUE", StringComparison.OrdinalIgnoreCase))
+            
+            if (notification.TrStatus.Equals(TpayTransactionStatus.Success, StringComparison.OrdinalIgnoreCase))
             {
                 if (orderProcessingService.CanMarkOrderAsPaid(order))
                 {
-                    order.AuthorizationTransactionId = notification.TranId;
+                    order.CapturedTransactionId = notification.TranId;
                     orderService.UpdateOrder(order);
                     orderProcessingService.MarkOrderAsPaid(order);
                 }
             }
             else
             {
+
                 if (orderProcessingService.CanCancelOrder(order))
                 {
-                    order.AuthorizationTransactionId = notification.TranId;
-                    order.AuthorizationTransactionResult = notification.TrError;
+                    order.CapturedTransactionId = notification.TranId;
+                    order.CapturedTransactionIdResult = notification.TrError;
                     orderService.UpdateOrder(order);
                     orderProcessingService.CancelOrder(order, true);
                 }
             }
             
-            return "TRUE";
+            return TpayTransactionStatus.Success;
         }
     }
 }
