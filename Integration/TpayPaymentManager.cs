@@ -105,8 +105,7 @@ namespace Nop.Plugin.Payments.Tpay.Integration
             result.MerchantDescription = storeContext.CurrentStore.Name;
             result.ResultEmail = paymentSettings.ResultEmail;
             var storeUri = new Uri(webHelper.GetStoreLocation());
-            result.ResultUrl =
-                "https://webhook.site/96e0a1aa-bf6c-438b-baf3-ce75cca9a78b";//new Uri(storeUri, "Plugins/PaymentTpay/Return").ToString();
+            result.ResultUrl = new Uri(storeUri, "Plugins/PaymentTpay/Return").ToString();
             result.ReturnErrorUrl = paymentSettings.ReturnErrorUrl;
             result.ReturnUrl = paymentSettings.ReturnUrl;
 
