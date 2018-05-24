@@ -1,10 +1,7 @@
-﻿@{
-    Layout = "";
-}
-@model  Nop.Plugin.Payments.TPay.Models.ConfigurationViewModel
-@using Nop.Web.Framework;
+﻿@model ConfigurationViewModel
 
-@Html.Action("StoreScopeConfiguration", "Setting", new { area = "Admin" })
+@using Nop.Web.Framework;
+@using Nop.Plugin.Payments.TPay.Models;
 
 @using (Html.BeginForm())
 {
@@ -47,6 +44,51 @@
                     <div class="col-md-9">
                         @Html.EditorFor(model => model.AdditionalFee)
                         @Html.ValidationMessageFor(model => model.AdditionalFee)
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-md-3">
+                        @Html.NopLabelFor(model => model.ApiPassword)
+                    </div>
+                    <div class="col-md-9">
+                        @Html.EditorFor(model => model.ApiPassword)
+                        @Html.ValidationMessageFor(model => model.ApiPassword)
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-md-3">
+                        @Html.NopLabelFor(model => model.ApiKey)
+                    </div>
+                    <div class="col-md-9">
+                        @Html.EditorFor(model => model.ApiKey)
+                        @Html.ValidationMessageFor(model => model.ApiKey)
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-md-3">
+                        @Html.NopLabelFor(model => model.ResultEmail)
+                    </div>
+                    <div class="col-md-9">
+                        @Html.EditorFor(model => model.ResultEmail)
+                        @Html.ValidationMessageFor(model => model.ResultEmail)
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-md-3">
+                        @Html.NopLabelFor(model => model.ReturnUrl)
+                    </div>
+                    <div class="col-md-9">
+                        @Html.EditorFor(model => model.ReturnUrl)
+                        @Html.ValidationMessageFor(model => model.ReturnUrl)
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-md-3">
+                        @Html.NopLabelFor(model => model.ReturnErrorUrl)
+                    </div>
+                    <div class="col-md-9">
+                        @Html.EditorFor(model => model.ReturnErrorUrl)
+                        @Html.ValidationMessageFor(model => model.ReturnErrorUrl)
                     </div>
                 </div>
                 <div class="form-group">

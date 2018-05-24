@@ -44,6 +44,9 @@
     <Reference Include="System.Web.Mvc, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\..\packages\Microsoft.AspNet.Mvc.5.2.3\lib\net45\System.Web.Mvc.dll</HintPath>
     </Reference>
+    <Reference Include="System.Web.WebPages">
+      <HintPath>..\..\packages\Microsoft.AspNet.WebPages.3.2.3\lib\net45\System.Web.WebPages.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -54,9 +57,15 @@
   <ItemGroup>
     <Compile Include="Controllers\TpayPaymentController.cs" />
     <Compile Include="Infrastructure\MD5HashManager.cs" />
+    <Compile Include="Infrastructure\RestSharpJsonNetSerializer.cs" />
     <Compile Include="Integration\Model\AcceptTos.cs" />
     <Compile Include="Integration\Model\CreateTpayTransactionResponse.cs" />
     <Compile Include="Integration\Model\Online.cs" />
+    <Compile Include="Integration\Model\TpayChargebackRequest.cs" />
+    <Compile Include="Integration\Model\TpayChargebackResponse.cs" />
+    <Compile Include="Integration\Model\TpayChargebackResult.cs" />
+    <Compile Include="Integration\Model\TpayNotification.cs" />
+    <Compile Include="Integration\Model\TpayPartialChargebackRequest.cs" />
     <Compile Include="Integration\Model\TpayTransaction.cs" />
     <Compile Include="Model\ConfigurationViewModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -73,13 +82,17 @@
     <None Include="Views\PaymentInfo.cshtml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="web.config" />
+    <None Include="web.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Description.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="logo.jpg" />
+    <Content Include="logo.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Libraries\Nop.Core\Nop.Core.csproj">

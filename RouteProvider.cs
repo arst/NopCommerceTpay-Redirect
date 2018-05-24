@@ -1,43 +1,36 @@
-﻿using Nop.Web.Framework.Mvc.Routes;
-using System;
-using System.Web.Mvc;
+﻿using System.Web.Mvc;
 using System.Web.Routing;
+using Nop.Web.Framework.Mvc.Routes;
 
-namespace Nop.Plugin.Payments.Payu
+namespace Nop.Plugin.Payments.Tpay
 {
     public class RouteProvider : IRouteProvider
     {
-        public int Priority
-        {
-            get
-            {
-                return 0;
-            }
-        }
+        public int Priority => 0;
 
         public void RegisterRoutes(RouteCollection routes)
         {
-            RouteCollectionExtensions.MapRoute(routes, "Plugin.Payments.Tpay.Configure", "Plugins/PaymentTpay/Configure", new
+            routes.MapRoute("Plugin.Payments.Tpay.Configure", "Plugins/PaymentTpay/Configure", new
             {
                 controller = "TpayPayment",
                 action = "Configure"
-            }, new string[]
+            }, new[]
             {
                 "Nop.Plugin.Payments.Payu.Controllers"
             });
-            RouteCollectionExtensions.MapRoute(routes, "Plugin.Payments.Tpay.PaymentInfo", "Plugins/PaymentTpay/PaymentInfo", new
+            routes.MapRoute("Plugin.Payments.Tpay.PaymentInfo", "Plugins/PaymentTpay/PaymentInfo", new
             {
                 controller = "TpayPayment",
                 action = "PaymentInfo"
-            }, new string[]
+            }, new[]
             {
                 "Nop.Plugin.Payments.Tpay.Controllers"
             });
-            RouteCollectionExtensions.MapRoute(routes, "Plugin.Payments.Tpay.Return", "Plugins/PaymentTpay/Return", new
+            routes.MapRoute("Plugin.Payments.Tpay.Return", "Plugins/PaymentTpay/Return", new
             {
                 controller = "TpayPayment",
                 action = "Return"
-            }, new string[]
+            }, new[]
             {
                 "Nop.Plugin.Payments.Tpay.Controllers"
             });

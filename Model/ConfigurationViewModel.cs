@@ -1,6 +1,5 @@
 ﻿using Nop.Web.Framework;
 using Nop.Web.Framework.Mvc;
-using System;
 
 namespace Nop.Plugin.Payments.TPay.Models
 {
@@ -69,6 +68,7 @@ namespace Nop.Plugin.Payments.TPay.Models
             set;
         }
 
+        [NopResourceDisplayName("Plugins.Payments.TPay.Language")]
         public string Language
         {
             get;

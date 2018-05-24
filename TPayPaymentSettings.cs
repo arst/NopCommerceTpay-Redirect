@@ -4,7 +4,7 @@ namespace Nop.Plugin.Payments.TPay
 {
     public class TpayPaymentSettings : ISettings
     {
-        public int MerchantID
+        public int MerchantId
         {
             get;
             set;

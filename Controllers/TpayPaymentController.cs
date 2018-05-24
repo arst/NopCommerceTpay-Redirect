@@ -1,19 +1,20 @@
 ﻿using System;
-using Nop.Core.Domain.Payments;
-using Nop.Plugin.Payments.TPay.Models;
-using Nop.Services.Configuration;
-using Nop.Services.Logging;
-using Nop.Services.Orders;
-using Nop.Services.Payments;
-using Nop.Web.Framework.Controllers;
 using System.Collections.Generic;
-using System.Threading.Tasks;
+using System.Diagnostics.CodeAnalysis;
 using System.Web.Mvc;
 using Nop.Core;
 using Nop.Core.Domain.Orders;
+using Nop.Core.Domain.Payments;
+using Nop.Plugin.Payments.Tpay.Integration.Model;
+using Nop.Plugin.Payments.TPay.Models;
+using Nop.Services.Configuration;
+using Nop.Services.Orders;
+using Nop.Services.Payments;
+using Nop.Web.Framework.Controllers;
 
 namespace Nop.Plugin.Payments.TPay.Controllers
 {
+    [SuppressMessage("ReSharper", "Mvc.ViewNotResolved")]
     public class TpayPaymentController : BasePaymentController
     {
         private readonly ISettingService settingService;
@@ -24,37 +25,34 @@ namespace Nop.Plugin.Payments.TPay.Controllers
 
         private readonly IOrderProcessingService orderProcessingService;
 
-        private readonly TpayPaymentSettings TPayPaymentSettings;
+        private readonly TpayPaymentSettings tPayPaymentSettings;
 
         private readonly PaymentSettings paymentSettings;
 
-        private readonly ILogger logger;
-
-        public TpayPaymentController(ISettingService settingService, IPaymentService paymentService, IOrderService orderService, IOrderProcessingService orderProcessingService, TpayPaymentSettings PayuPaymentSettings, PaymentSettings paymentSettings, ILogger logger)
+        public TpayPaymentController(ISettingService settingService, IPaymentService paymentService, IOrderService orderService, IOrderProcessingService orderProcessingService, TpayPaymentSettings tPayPaymentSettings, PaymentSettings paymentSettings)
         {
             this.settingService = settingService;
             this.paymentService = paymentService;
             this.orderService = orderService;
             this.orderProcessingService = orderProcessingService;
-            this.TPayPaymentSettings = PayuPaymentSettings;
+            this.tPayPaymentSettings = tPayPaymentSettings;
             this.paymentSettings = paymentSettings;
-            this.logger = logger;
         }
 
         [AdminAuthorize, ChildActionOnly]
         public ActionResult Configure()
         {
             ConfigurationViewModel model = new ConfigurationViewModel();
-            model.AdditionalFee = this.TPayPaymentSettings.AdditionalFee;
-            model.IncludeShippingMethodInDescription = this.TPayPaymentSettings.IncludeShippingMethodInDescription;
-            model.MerchantId = this.TPayPaymentSettings.MerchantID;
-            model.MerchantSecret = this.TPayPaymentSettings.MerchantSecret;
-            model.ApiKey = TPayPaymentSettings.ApiKey;
-            model.ApiPassword = TPayPaymentSettings.ApiPassword;
-            model.ResultEmail = TPayPaymentSettings.ResultEmail;
-            model.ReturnErrorUrl = TPayPaymentSettings.ReturnErrorUrl;
-            model.ReturnUrl = TPayPaymentSettings.ReturnUrl;
-            model.Language = TPayPaymentSettings.Language;
+            model.AdditionalFee = tPayPaymentSettings.AdditionalFee;
+            model.IncludeShippingMethodInDescription = tPayPaymentSettings.IncludeShippingMethodInDescription;
+            model.MerchantId = tPayPaymentSettings.MerchantId;
+            model.MerchantSecret = tPayPaymentSettings.MerchantSecret;
+            model.ApiKey = tPayPaymentSettings.ApiKey;
+            model.ApiPassword = tPayPaymentSettings.ApiPassword;
+            model.ResultEmail = tPayPaymentSettings.ResultEmail;
+            model.ReturnErrorUrl = tPayPaymentSettings.ReturnErrorUrl;
+            model.ReturnUrl = tPayPaymentSettings.ReturnUrl;
+            model.Language = tPayPaymentSettings.Language;
 
             return View("~/Plugins/Payments.TPay/Views/Configure.cshtml", model);
         }
@@ -63,23 +61,23 @@ namespace Nop.Plugin.Payments.TPay.Controllers
         public ActionResult Configure(ConfigurationViewModel model)
         {
             ActionResult result;
-            if (!base.ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                result = this.Configure();
+                result = Configure();
             }
             else
             {
-                this.TPayPaymentSettings.AdditionalFee = model.AdditionalFee;
-                this.TPayPaymentSettings.IncludeShippingMethodInDescription = model.IncludeShippingMethodInDescription;
-                this.TPayPaymentSettings.MerchantID = model.MerchantId;
-                this.TPayPaymentSettings.MerchantSecret = model.MerchantSecret;
-                this.TPayPaymentSettings.ApiKey = model.ApiKey;
-                this.TPayPaymentSettings.ApiPassword = model.ApiPassword;
-                this.TPayPaymentSettings.ResultEmail = model.ResultEmail;
-                this.TPayPaymentSettings.ReturnErrorUrl = model.ReturnErrorUrl;
-                this.TPayPaymentSettings.ReturnUrl = model.ReturnUrl;
-                this.TPayPaymentSettings.Language = model.Language;
-                this.settingService.SaveSetting<TpayPaymentSettings>(this.TPayPaymentSettings, 0);
+                tPayPaymentSettings.IncludeShippingMethodInDescription = model.IncludeShippingMethodInDescription;
+                tPayPaymentSettings.AdditionalFee = model.AdditionalFee;
+                tPayPaymentSettings.MerchantId = model.MerchantId;
+                tPayPaymentSettings.MerchantSecret = model.MerchantSecret;
+                tPayPaymentSettings.ApiKey = model.ApiKey;
+                tPayPaymentSettings.ApiPassword = model.ApiPassword;
+                tPayPaymentSettings.ResultEmail = model.ResultEmail;
+                tPayPaymentSettings.ReturnErrorUrl = model.ReturnErrorUrl;
+                tPayPaymentSettings.ReturnUrl = model.ReturnUrl;
+                tPayPaymentSettings.Language = model.Language;
+                settingService.SaveSetting(tPayPaymentSettings);
                 result = View("~/Plugins/Payments.TPay/Views/Configure.cshtml", model);
             }
             return result;
@@ -105,35 +103,34 @@ namespace Nop.Plugin.Payments.TPay.Controllers
 
 
         [ValidateInput(false)]
-        public async Task<string> Return(PayNotification notification)
+        public string Return(TpayNotification notification)
         {
-            
-            TpayPaymentProcessor processor = this.paymentService.LoadPaymentMethodBySystemName("Payments.TPay") as TPayPaymentProcessor;
+            TpayPaymentProcessor processor = paymentService.LoadPaymentMethodBySystemName("Payments.TPay") as TpayPaymentProcessor;
             if (processor == null || 
-                !PaymentExtensions.IsPaymentMethodActive(processor, this.paymentSettings) || 
+                !processor.IsPaymentMethodActive(paymentSettings) || 
                 !processor.PluginDescriptor.Installed)
             {
                 throw new NopException("TPay payments module cannot be loaded");
             }
             int localOrderNumber = Convert.ToInt32(notification.TrCrc);
-            Order order = this.orderService.GetOrderById(localOrderNumber);
+            Order order = orderService.GetOrderById(localOrderNumber);
             if (notification.TrStatus.Equals("TRUE", StringComparison.OrdinalIgnoreCase))
             {
-                if (this.orderProcessingService.CanMarkOrderAsPaid(order))
+                if (orderProcessingService.CanMarkOrderAsPaid(order))
                 {
                     order.AuthorizationTransactionId = notification.TranId;
-                    this.orderService.UpdateOrder(order);
-                    this.orderProcessingService.MarkOrderAsPaid(order);
+                    orderService.UpdateOrder(order);
+                    orderProcessingService.MarkOrderAsPaid(order);
                 }
             }
             else
             {
-                if (this.orderProcessingService.CanCancelOrder(order))
+                if (orderProcessingService.CanCancelOrder(order))
                 {
                     order.AuthorizationTransactionId = notification.TranId;
                     order.AuthorizationTransactionResult = notification.TrError;
-                    this.orderService.UpdateOrder(order);
-                    this.orderProcessingService.CancelOrder(order, true);
+                    orderService.UpdateOrder(order);
+                    orderProcessingService.CancelOrder(order, true);
                 }
             }
             

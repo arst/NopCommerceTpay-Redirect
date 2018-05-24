@@ -1,25 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
-using System.Web;
-using System.Web.Routing;
-using Nop.Core;
-using Nop.Core.Domain.Directory;
+﻿using Nop.Core;
 using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Payments;
 using Nop.Core.Plugins;
 using Nop.Plugin.Payments.Tpay.Integration.Model;
 using Nop.Plugin.Payments.TPay.Controllers;
 using Nop.Services.Configuration;
-using Nop.Services.Customers;
-using Nop.Services.Directory;
 using Nop.Services.Localization;
-using Nop.Services.Logging;
 using Nop.Services.Payments;
-using Nop.Services.Stores;
 using RestSharp;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
+using System.Web;
+using System.Web.Routing;
+using Nop.Plugin.Payments.Tpay.Infrastructure;
 
 namespace Nop.Plugin.Payments.TPay
 {
@@ -33,13 +30,7 @@ namespace Nop.Plugin.Payments.TPay
 
         private readonly IWebHelper webHelper;
 
-        private readonly ILogger logger;
-
-        private readonly ICustomerService customerService;
-
         private readonly IStoreContext storeContext;
-
-        private readonly IStoreService storeService;
 
         public bool SupportCapture => false;
 
@@ -59,15 +50,12 @@ namespace Nop.Plugin.Payments.TPay
 
         public string PaymentMethodDescription => "TPay";
 
-        public TpayPaymentProcessor(TpayPaymentSettings tPayPaymentSettings, ISettingService settingService, ICurrencyService currencyService, CurrencySettings currencySettings, IWebHelper webHelper, ILogger logger, ICustomerService customerService, IStoreContext storeContext, IStoreService storeService, IWorkContext workContext)
+        public TpayPaymentProcessor(TpayPaymentSettings tPayPaymentSettings, ISettingService settingService, IWebHelper webHelper, IStoreContext storeContext, IWorkContext workContext)
         {
             this.tPayPaymentSettings = tPayPaymentSettings;
             this.settingService = settingService;
             this.webHelper = webHelper;
-            this.logger = logger;
-            this.customerService = customerService;
             this.storeContext = storeContext;
-            this.storeService = storeService;
             this.workContext = workContext;
         }
 
@@ -77,15 +65,19 @@ namespace Nop.Plugin.Payments.TPay
         {
             var transaction = PrepareTransaction(postProcessPaymentRequest.Order);
             RestClient client = new RestClient($"https://secure.tpay.com/api/gw/{tPayPaymentSettings.ApiKey}/");
-            RestRequest request = new RestRequest("transaction/create", Method.POST);
-            request.AddBody(transaction);
+            RestRequest request = new RestRequest("transaction/create", Method.POST)
+            {
+                JsonSerializer = new RestSharpJsonNetSerializer()
+            };
+            request.AddHeader("Content-Type", "application/json");
+            request.AddParameter("application/json; charset=utf-8", request.JsonSerializer.Serialize(transaction), ParameterType.RequestBody);
             var response = client.Post<CreateTpayTransactionResponse>(request);
 
             if (!string.IsNullOrEmpty(response.Data.Err))
             {
                 throw new NopException(response.Data.Err);
             }
-
+            
             HttpContext.Current.Response.Redirect(response.Data.Url);
             HttpContext.Current.Response.Flush();
         }
@@ -93,6 +85,7 @@ namespace Nop.Plugin.Payments.TPay
         private TpayTransaction PrepareTransaction(Order order)
         {
             TpayTransaction result = new TpayTransaction();
+            result.Id = tPayPaymentSettings.MerchantId;
             result.Email = order.BillingAddress.Email;
             result.Address = string.Concat(order.BillingAddress.Address1, " ", order.BillingAddress.Address2);
             result.Amount = order.OrderTotal;
@@ -138,15 +131,15 @@ namespace Nop.Plugin.Payments.TPay
 
         private string GenerateCheckSum(Order order)
         {
-            return CreateMD5(
-                $"{tPayPaymentSettings.MerchantID}{order.OrderTotal.ToString("0.00", CultureInfo.InvariantCulture)}{order.Id.ToString()}{tPayPaymentSettings.MerchantSecret}");
+            return CreateMd5(
+                $"{tPayPaymentSettings.MerchantId}{order.OrderTotal:0.#####}{order.Id}{tPayPaymentSettings.MerchantSecret}");
         }
 
-        public static string CreateMD5(string input)
+        public static string CreateMd5(string input)
         {
-            using (MD5 md5 = MD5.Create())
+            using (var md5 = MD5.Create())
             {
-                byte[] inputBytes = Encoding.ASCII.GetBytes(input);
+                byte[] inputBytes = Encoding.UTF8.GetBytes(input);
                 byte[] hashBytes = md5.ComputeHash(inputBytes);
 
                 StringBuilder sb = new StringBuilder();
@@ -156,14 +149,6 @@ namespace Nop.Plugin.Payments.TPay
                 }
                 return sb.ToString();
             }
-        }
-
-        private string
-            GetTransactionUrl(int id, decimal total, string internalId, string description, string returnUrl,
-                string hash, string email, string name)
-        {
-            return
-                $"https://secure.tpay.com?id={id}&md5sum={HttpContext.Current.Server.UrlEncode(hash)}&crc={internalId}&kwota={total.ToString("0.00", CultureInfo.InvariantCulture)}&opis={description}&pow_url={HttpContext.Current.Server.UrlEncode(returnUrl)}&email={email}&nazwisko={name}&jezyk={tPayPaymentSettings.Language}";
         }
 
         public decimal GetAdditionalHandlingFee(IList<ShoppingCartItem> cart)
@@ -181,7 +166,38 @@ namespace Nop.Plugin.Payments.TPay
         public RefundPaymentResult Refund(RefundPaymentRequest refundPaymentRequest)
         {
             RefundPaymentResult result = new RefundPaymentResult();
-            result.AddError("Refund not supportd");
+            RestClient client = new RestClient($"https://secure.tpay.com/api/gw/{tPayPaymentSettings.ApiKey}/chargeback/transaction");
+            TpayChargebackRequest chargebackRequest;
+
+            if (refundPaymentRequest.IsPartialRefund)
+            {
+                var partialRefundRequest = new TpayPartialChargebackRequest();
+                partialRefundRequest.Amount = refundPaymentRequest.AmountToRefund;
+                partialRefundRequest.ApiPassword = tPayPaymentSettings.ApiPassword;
+                partialRefundRequest.Title = refundPaymentRequest.Order.CaptureTransactionId;
+                chargebackRequest = partialRefundRequest;
+            }
+            else
+            {
+                chargebackRequest = new TpayChargebackRequest();
+                chargebackRequest.ApiPassword = tPayPaymentSettings.ApiPassword;
+                chargebackRequest.Title = refundPaymentRequest.Order.CaptureTransactionId;
+            }
+
+            var request = new RestRequest();
+            request.AddBody(chargebackRequest);
+            var response = client.ExecuteAsPost<TpayChargebackResponse>(request, HttpMethod.Post.ToString());
+
+            if (response.Data.Result != TpayChargebackResult.Correct)
+            {
+                result.Errors.Add(response.Data.Error);
+            }
+            else
+            {
+                result.NewPaymentStatus = refundPaymentRequest.IsPartialRefund
+                    ? PaymentStatus.PartiallyRefunded
+                    : PaymentStatus.Refunded;
+            }
 
             return result;
         }
@@ -260,13 +276,13 @@ namespace Nop.Plugin.Payments.TPay
         {
             TpayPaymentSettings settings = new TpayPaymentSettings
             {
-                MerchantID = 0,
+                MerchantId = 0,
                 MerchantSecret = String.Empty,
                 IncludeShippingMethodInDescription = false,
                 AdditionalFee = 0
             };
 
-            settingService.SaveSetting(settings, 0);
+            settingService.SaveSetting(settings);
             this.AddOrUpdatePluginLocaleResource("Plugins.Payments.TPay.Instructions", "");
             this.AddOrUpdatePluginLocaleResource("Plugins.Payments.TPay.RedirectionTip", "You will be redirected to TPay site to complete the order.");
             this.AddOrUpdatePluginLocaleResource("Plugins.Payments.TPay.MerchantID", "Merchant ID");
@@ -287,6 +303,8 @@ namespace Nop.Plugin.Payments.TPay
             this.AddOrUpdatePluginLocaleResource("Plugins.Payments.TPay.ReturnUrl.Hint", "Enter return url");
             this.AddOrUpdatePluginLocaleResource("Plugins.Payments.TPay.ApiKey", "Api Key");
             this.AddOrUpdatePluginLocaleResource("Plugins.Payments.TPay.ApiKey.Hint", "Enter api key");
+            this.AddOrUpdatePluginLocaleResource("Plugins.Payments.TPay.Language", "Language");
+            this.AddOrUpdatePluginLocaleResource("Plugins.Payments.TPay.Language.Hint", "Language for Tpay interface when user is redirected");
             base.Install();
         }
 
@@ -312,6 +330,8 @@ namespace Nop.Plugin.Payments.TPay
             this.DeletePluginLocaleResource("Plugins.Payments.TPay.ReturnUrl.Hint");
             this.DeletePluginLocaleResource("Plugins.Payments.TPay.ApiKey");
             this.DeletePluginLocaleResource("Plugins.Payments.TPay.ApiKey.Hint");
+            this.DeletePluginLocaleResource("Plugins.Payments.TPay.Language");
+            this.DeletePluginLocaleResource("Plugins.Payments.TPay.Language.Hint");
             base.Uninstall();
         }
     }
