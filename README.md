@@ -1,4 +1,4 @@
-# NopCommerce integration with PayU (Poland)
+# NopCommerce integration with TPay.com
 NopCommerce plugin for TPay.com payment system integration
 
 # NopCommerce version
