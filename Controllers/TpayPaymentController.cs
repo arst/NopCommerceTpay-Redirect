@@ -115,47 +115,25 @@ namespace Nop.Plugin.Payments.TPay.Controllers
         public string Return(TpayNotification notification)
         {
             string errorMessage = string.Empty;
-            var isNotificationValid = !this.availableIPsTable.Contains(Request.UserHostAddress) ||
-                !notification.Md5Sum.Equals(GenerateCheckSum(notification), StringComparison.OrdinalIgnoreCase);
 
-            if(isNotificationValid)
+            if(IsNotificationValid() && IsTpayPaymentProcessorEnabled())
             {
-                TpayPaymentProcessor processor = paymentService.LoadPaymentMethodBySystemName("Payments.TPay") as TpayPaymentProcessor;
-                var isTpayPaymentProcessorEnabled = processor == null || 
-                    !processor.IsPaymentMethodActive(paymentSettings) || 
-                    !processor.PluginDescriptor.Installed;
-
-                if (isTpayPaymentProcessorEnabled)
+                int localOrderNumber = Convert.ToInt32(notification.TrCrc);
+                Order order = orderService.GetOrderById(localOrderNumber);
+                
+                if (IsSuccessfullTransaction(notification) && orderProcessingService.CanMarkOrderAsPaid(order))
                 {
-                    int localOrderNumber = Convert.ToInt32(notification.TrCrc);
-                    Order order = orderService.GetOrderById(localOrderNumber);
-                    var isSuccessfullTransaction = 
-                        notification.TrStatus.Equals(TpayTransactionStatus.Success, StringComparison.OrdinalIgnoreCase) && 
-                        !notification.TrError.Equals(TpayTransactionStatus.Absent, StringComparison.OrdinalIgnoreCase);
-                    
-                    if (isSuccessfullTransaction)
-                    {
-                        if (orderProcessingService.CanMarkOrderAsPaid(order))
-                        {
-                            order.CapturedTransactionId = notification.TranId;
-                            orderService.UpdateOrder(order);
-                            orderProcessingService.MarkOrderAsPaid(order);
-
-                            return TpayTransactionStatus.Success;
-                        }
-                    }
-                    else
-                    {
-                        order.CapturedTransactionIdResult = notification.TrError;
-                        orderService.UpdateOrder(order);
-                    }
-                    return TpayTransactionStatus.Success;
-                } 
+                    order.CapturedTransactionId = notification.TranId;
+                    orderService.UpdateOrder(order);
+                    orderProcessingService.MarkOrderAsPaid(order);
+                }
                 else
                 {
-                    errorMessage = "TPay processor disabled";
+                    order.CapturedTransactionIdResult = notification.TrError;
+                    orderService.UpdateOrder(order);
                 }
-                
+
+                return TpayTransactionStatus.Success;
             }
             else
             {
@@ -173,6 +151,23 @@ namespace Nop.Plugin.Payments.TPay.Controllers
         private string GenerateErrorResponse(string message)
         {
             return $"{TpayTransactionStatus.Error} - {message}";
+        }
+
+        private bool IsTpayPaymentProcessorEnabled()
+        {
+            TpayPaymentProcessor processor = paymentService.LoadPaymentMethodBySystemName("Payments.TPay") as TpayPaymentProcessor;
+            return processor == null || !processor.IsPaymentMethodActive(paymentSettings) || !processor.PluginDescriptor.Installed;
+        }
+
+        private bool IsNotificationValid()
+        {
+            return this.availableIPsTable.Contains(Request.UserHostAddress) && notification.Md5Sum.Equals(GenerateCheckSum(notification), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool IsSuccessfullTransaction(TpayNotification notification)
+        {
+            return notification.TrStatus.Equals(TpayTransactionStatus.Success, StringComparison.OrdinalIgnoreCase) && 
+                !notification.TrError.Equals(TpayTransactionStatus.Absent, StringComparison.OrdinalIgnoreCase);
         }
     }
 }
