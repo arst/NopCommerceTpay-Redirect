@@ -2,7 +2,7 @@
 
 namespace Nop.Plugin.Payments.Tpay.Integration.Model
 {
-    class TpayChargebackResponse
+    public class TpayChargebackResponse
     {
         [JsonProperty("result")]
         public TpayChargebackResult Result { get; set; }

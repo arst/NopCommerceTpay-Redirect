@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Web.Mvc;
-using Nop.Core;
-using Nop.Core.Domain.Orders;
 using Nop.Core.Domain.Payments;
+using Nop.Plugin.Payments.Tpay.Infrastructure;
 using Nop.Plugin.Payments.Tpay.Integration.Model;
 using Nop.Plugin.Payments.TPay.Models;
 using Nop.Services.Configuration;
@@ -17,7 +16,9 @@ namespace Nop.Plugin.Payments.TPay.Controllers
     [SuppressMessage("ReSharper", "Mvc.ViewNotResolved")]
     public class TpayPaymentController : BasePaymentController
     {
-        private const string configurationViewPath = "~/Plugins/Payments.TPay/Views/Configure.cshtml";
+        private const string ConfigurationViewPath = "~/Plugins/Payments.TPay/Views/Configure.cshtml";
+
+        private const string PaymentInfoViewPath = "~/Plugins/Payments.TPay/Views/PaymentInfo.cshtml";
 
         private readonly ISettingService settingService;
 
@@ -33,8 +34,6 @@ namespace Nop.Plugin.Payments.TPay.Controllers
 
         private readonly HashSet<string> availableIPsTable;
 
-        private 
-
         public TpayPaymentController(ISettingService settingService, IPaymentService paymentService, IOrderService orderService, IOrderProcessingService orderProcessingService, TpayPaymentSettings tPayPaymentSettings, PaymentSettings paymentSettings)
         {
             this.settingService = settingService;
@@ -43,7 +42,9 @@ namespace Nop.Plugin.Payments.TPay.Controllers
             this.orderProcessingService = orderProcessingService;
             this.tPayPaymentSettings = tPayPaymentSettings;
             this.paymentSettings = paymentSettings;
-            this.availableIPsTable = String.IsNullOrEmpty(tPayPaymentSettings.TPayNotifierIPs) ? new HashSet<string>() : new HashSet(tPayPaymentSettings.TPayNotifierIPs.Split(","));
+            availableIPsTable = String.IsNullOrEmpty(tPayPaymentSettings.TPayNotifierIPs)
+                ? new HashSet<string>()
+                : new HashSet<string>(tPayPaymentSettings.TPayNotifierIPs.Split(','));
         }
 
         [AdminAuthorize, ChildActionOnly]
@@ -62,7 +63,7 @@ namespace Nop.Plugin.Payments.TPay.Controllers
             model.Language = tPayPaymentSettings.Language;
             model.TPayNotifierIPs = tPayPaymentSettings.TPayNotifierIPs;
 
-            return View(configurationViewPath, model);
+            return View(ConfigurationViewPath, model);
         }
 
         [AdminAuthorize, ChildActionOnly, HttpPost]
@@ -87,7 +88,7 @@ namespace Nop.Plugin.Payments.TPay.Controllers
                 tPayPaymentSettings.Language = model.Language;
                 tPayPaymentSettings.TPayNotifierIPs = model.TPayNotifierIPs;
                 settingService.SaveSetting(tPayPaymentSettings);
-                result = View(configurationViewPath, model);
+                result = View(ConfigurationViewPath, model);
             }
             return result;
         }
@@ -95,7 +96,7 @@ namespace Nop.Plugin.Payments.TPay.Controllers
         [ChildActionOnly]
         public ActionResult PaymentInfo()
         {
-            return View(configurationViewPath);
+            return View(PaymentInfoViewPath);
         }
 
         [NonAction]
@@ -114,58 +115,48 @@ namespace Nop.Plugin.Payments.TPay.Controllers
         [ValidateInput(false)]
         public string Return(TpayNotification notification)
         {
-            string errorMessage = string.Empty;
+            if (!IsNotificationValid(notification) || !IsTpayPaymentProcessorEnabled())
+                return GenerateErrorResponse("Invalid request");
 
-            if(IsNotificationValid() && IsTpayPaymentProcessorEnabled())
-            {
-                int localOrderNumber = Convert.ToInt32(notification.TrCrc);
-                Order order = orderService.GetOrderById(localOrderNumber);
+            var localOrderNumber = Convert.ToInt32(notification.tr_crc);
+            var order = orderService.GetOrderById(localOrderNumber);
                 
-                if (IsSuccessfullTransaction(notification) && orderProcessingService.CanMarkOrderAsPaid(order))
-                {
-                    orderProcessingService.MarkOrderAsPaid(order);
-                }
-                else
-                {
-                    order.CapturedTransactionIdResult = notification.TrError;
-                    orderService.UpdateOrder(order);
-                }
-
-                return TpayTransactionStatus.Success;
+            if (IsSuccessfullTransaction(notification) && 
+                orderProcessingService.CanMarkOrderAsPaid(order))
+            {
+                orderProcessingService.MarkOrderAsPaid(order);
             }
             else
             {
-                errorMessage = "Invalid request";
+                order.CaptureTransactionResult = notification.tr_error;
+                orderService.UpdateOrder(order);
             }
-            
-            return GenerateErrorResponse(errorMessage);
+
+            return TpayTransactionStatus.Success;
+
         }
 
         private string GenerateCheckSum(TpayNotification notification)
         {
-            return MD5HashManager.GetMd5Hash($"{paymentSettings.MerchantId}{notification.TranId}{notification.TrAmount}{notification.TrCrc}{paymentSettings.MerchantSecret}");
+            return Md5HashManager.GetMd5Hash($"{tPayPaymentSettings.MerchantId}{notification.tr_id}{notification.tr_amount}{notification.tr_crc}{tPayPaymentSettings.MerchantSecret}");
         }
 
-        private string GenerateErrorResponse(string message)
+        private static string GenerateErrorResponse(string message)
         {
             return $"{TpayTransactionStatus.Error} - {message}";
         }
 
         private bool IsTpayPaymentProcessorEnabled()
         {
-            TpayPaymentProcessor processor = paymentService.LoadPaymentMethodBySystemName("Payments.TPay") as TpayPaymentProcessor;
-            return processor == null || !processor.IsPaymentMethodActive(paymentSettings) || !processor.PluginDescriptor.Installed;
+            return paymentService.LoadPaymentMethodBySystemName("Payments.TPay") is TpayPaymentProcessor processor && processor.IsPaymentMethodActive(paymentSettings) && processor.PluginDescriptor.Installed;
         }
 
-        private bool IsNotificationValid()
-        {
-            return this.availableIPsTable.Contains(Request.UserHostAddress) && notification.Md5Sum.Equals(GenerateCheckSum(notification), StringComparison.OrdinalIgnoreCase);
-        }
+        private bool IsNotificationValid(TpayNotification notification) => availableIPsTable.Contains(Request.UserHostAddress) && notification.Md5Sum.Equals(GenerateCheckSum(notification), StringComparison.OrdinalIgnoreCase);
 
-        private bool IsSuccessfullTransaction(TpayNotification notification)
+        private static bool IsSuccessfullTransaction(TpayNotification notification)
         {
-            return notification.TrStatus.Equals(TpayTransactionStatus.Success, StringComparison.OrdinalIgnoreCase) && 
-                !notification.TrError.Equals(TpayTransactionStatus.Absent, StringComparison.OrdinalIgnoreCase);
+            return notification.tr_status.Equals(TpayTransactionStatus.Success, StringComparison.OrdinalIgnoreCase) && 
+                !notification.tr_error.Equals(TpayTransactionStatus.Absent, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

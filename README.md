@@ -11,8 +11,6 @@ Support version 3.90
 # NOTE
 This is redirect payment method and recurring payments are not supported.
 
-# NOTE
-
 
 
 

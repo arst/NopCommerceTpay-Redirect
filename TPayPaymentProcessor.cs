@@ -7,21 +7,20 @@ using Nop.Plugin.Payments.TPay.Controllers;
 using Nop.Services.Configuration;
 using Nop.Services.Localization;
 using Nop.Services.Payments;
-using RestSharp;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Net.Http;
-using System.Security.Cryptography;
-using System.Text;
+using System.Diagnostics.CodeAnalysis;
 using System.Web;
 using System.Web.Routing;
-using Nop.Plugin.Payments.Tpay.Infrastructure;
+using Nop.Plugin.Payments.Tpay.Integration;
 
 namespace Nop.Plugin.Payments.TPay
 {
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public class TpayPaymentProcessor : BasePlugin, IPaymentMethod
     {
+        private readonly ITpayPaymentManager paymentManager;
+
         private readonly TpayPaymentSettings tPayPaymentSettings;
 
         private readonly ISettingService settingService;
@@ -44,24 +43,25 @@ namespace Nop.Plugin.Payments.TPay
 
         public string PaymentMethodDescription => "TPay";
 
-        public TpayPaymentProcessor(TpayPaymentSettings tPayPaymentSettings, ISettingService settingService)
+        public TpayPaymentProcessor(TpayPaymentSettings tPayPaymentSettings, ISettingService settingService, ITpayPaymentManager paymnentManager)
         {
             this.tPayPaymentSettings = tPayPaymentSettings;
             this.settingService = settingService;
+            this.paymentManager = paymnentManager;
         }
 
         public ProcessPaymentResult ProcessPayment(ProcessPaymentRequest processPaymentRequest) => new ProcessPaymentResult();
 
         public void PostProcessPayment(PostProcessPaymentRequest postProcessPaymentRequest)
         {
-            var createTransactionResult = TpayPaymentManager.CreatePayment(postProcessPaymentRequest.Order);
+            var createTransactionResult = paymentManager.CreatePayment(postProcessPaymentRequest.Order);
 
             if (!string.IsNullOrEmpty(createTransactionResult.Err))
             {
                 throw new NopException(createTransactionResult.Err);
             }
-            postProcessPaymentRequest.Order.CapturedTransactionId = createTransactionResult.Title;
-            postProcessPaymentRequest.Order.CapturedTransactionResult = createTransactionResult.Desc;
+            postProcessPaymentRequest.Order.CaptureTransactionId = createTransactionResult.Title;
+            postProcessPaymentRequest.Order.CaptureTransactionResult = createTransactionResult.Desc;
             HttpContext.Current.Response.Redirect(createTransactionResult.Url);
             HttpContext.Current.Response.Flush();
         }
@@ -81,7 +81,7 @@ namespace Nop.Plugin.Payments.TPay
         public RefundPaymentResult Refund(RefundPaymentRequest refundPaymentRequest)
         {
             RefundPaymentResult result = new RefundPaymentResult();
-            var chargebackResult = TpayPaymentManager.CreateChargeback(refundPaymentRequest.Order.CapturedTransactionId, refundPaymentRequest.Amount,refundPaymentRequest.IsPartial);
+            var chargebackResult = paymentManager.CreateChargeback(refundPaymentRequest.Order.CaptureTransactionId, refundPaymentRequest.AmountToRefund, refundPaymentRequest.IsPartialRefund);
 
             if (chargebackResult.Result != TpayChargebackResult.Correct)
             {

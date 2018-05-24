@@ -1,47 +1,35 @@
 ﻿using System;
 using Newtonsoft.Json;
+// ReSharper disable InconsistentNaming
 
 namespace Nop.Plugin.Payments.Tpay.Integration.Model
 {
     public class TpayNotification
     {
-        [JsonProperty("id")]
         public int Id { get; set; }
 
-        [JsonProperty("tran_id")]
-        public string TranId { get; set; }
+        public string tr_id { get; set; }
 
-        [JsonProperty("tr_date")]
-        public DateTime TrDate { get; set; }
+        public DateTime tr_date { get; set; }
 
-        [JsonProperty("tr_crc")]
-        public string TrCrc { get; set; }
+        public string tr_crc { get; set; }
 
-        [JsonProperty("tr_amount")]
-        public string TrAmount { get; set; }
+        public string tr_amount { get; set; }
 
-        [JsonProperty("tr_paid")]
-        public string TrPaid { get; set; }
+        public string tr_paid { get; set; }
 
-        [JsonProperty("tr_desc")]
-        public string TrDesc { get; set; }
+        public string tr_desc { get; set; }
 
-        [JsonProperty("tr_status")]
-        public string TrStatus { get; set; }
+        public string tr_status { get; set; }
 
-        [JsonProperty("tr_error")]
-        public string TrError { get; set; }
+        public string tr_error { get; set; }
 
-        [JsonProperty("tr_email")]
-        public string TrEmail { get; set; }
+        public string tr_email { get; set; }
 
-        [JsonProperty("md5sum")]
         public string Md5Sum { get; set; }
 
-        [JsonProperty("test_mode")]
-        public int TestMode { get; set; }
+        public int test_mode { get; set; }
 
-        [JsonProperty("wallet")]
         public string Wallet { get; set; }
     }
 }

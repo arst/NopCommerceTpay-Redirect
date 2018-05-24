@@ -1,39 +1,37 @@
-using Nop.Core;
-using Nop.Core.Domain.Orders;
-using Nop.Core.Domain.Payments;
-using Nop.Core.Plugins;
-using Nop.Plugin.Payments.Tpay.Integration.Model;
-using Nop.Plugin.Payments.TPay.Controllers;
-using Nop.Services.Configuration;
-using Nop.Services.Localization;
-using Nop.Services.Payments;
-using RestSharp;
 using System;
-using System.Collections.Generic;
-using System.Globalization;
 using System.Net.Http;
-using System.Security.Cryptography;
 using System.Text;
 using System.Web;
-using System.Web.Routing;
+using Nop.Core;
+using Nop.Core.Domain.Orders;
 using Nop.Plugin.Payments.Tpay.Infrastructure;
+using Nop.Plugin.Payments.Tpay.Integration.Model;
+using Nop.Plugin.Payments.TPay;
+using RestSharp;
 
-namespace Nop.Plugin.Payments.TPay
+namespace Nop.Plugin.Payments.Tpay.Integration
 {
-        public class TpayPaymentManager {
-        private const string createTransactionOperationPath = "create"; 
+    public class TpayPaymentManager : ITpayPaymentManager
+    {
+        private const string CreateTransactionOperationPath = "create"; 
 
         private readonly RestClient client;
+
         private readonly TpayPaymentSettings paymentSettings;
+
         private readonly IWebHelper webHelper;
+
         private readonly IWorkContext workContext;
 
-        public TpayPaymentManager(TpayPaymentSettings tPayPaymentSettings, IWebHelper webHelper, IWorkContext workContext)
+        private readonly IStoreContext storeContext;
+
+        public TpayPaymentManager(TpayPaymentSettings tPayPaymentSettings, IWebHelper webHelper, IWorkContext workContext, IStoreContext storeContext)
         {
             paymentSettings = tPayPaymentSettings;
             client = new RestClient($"https://secure.tpay.com/api/gw/{paymentSettings.ApiKey}/transaction");
-            webHelper = webHelper;
-            workContext = workContext;
+            this.webHelper = webHelper;
+            this.workContext = workContext;
+            this.storeContext = storeContext;
         }
 
         public CreateTpayTransactionResponse CreatePayment(Order order)
@@ -50,18 +48,18 @@ namespace Nop.Plugin.Payments.TPay
 
             if (isPartial)
             {
-                var chargebackRequest = new TpayPartialChargebackRequest() 
+                chargebackRequest = new TpayPartialChargebackRequest() 
                 {
                     Amount = amount,
                     ApiPassword = paymentSettings.ApiPassword,
-                    Title = capturedTransactionId;
+                    Title = capturedTransactionId
                 };
             }
             else
             {
                 chargebackRequest = new TpayChargebackRequest()
                 {
-                    ApiPassword = tPayPaymentSettings.ApiPassword,
+                    ApiPassword = paymentSettings.ApiPassword,
                     Title = capturedTransactionId
                 };
             }
@@ -74,7 +72,7 @@ namespace Nop.Plugin.Payments.TPay
 
         private RestRequest GetPreconfiguredRequest(object body)
         {
-            RestRequest request = new RestRequest(createTransactionOperationPath, Method.POST)
+            RestRequest request = new RestRequest(CreateTransactionOperationPath, Method.POST)
             {
                 JsonSerializer = new RestSharpJsonNetSerializer()
             };
@@ -87,12 +85,12 @@ namespace Nop.Plugin.Payments.TPay
         private TpayTransaction ResolveTransaction(Order order)
         {
             TpayTransaction result = new TpayTransaction();
-            result.Id = tPayPaymentSettings.MerchantId;
+            result.Id = paymentSettings.MerchantId;
             result.Email = order.BillingAddress.Email;
             result.Address = string.Concat(order.BillingAddress.Address1, " ", order.BillingAddress.Address2);
             result.Amount = order.OrderTotal;
             result.AcceptTos = (int)AcceptTos.Yes;
-            result.ApiPassword = tPayPaymentSettings.ApiPassword;
+            result.ApiPassword = paymentSettings.ApiPassword;
             result.City = order.BillingAddress.City;
             result.Country = order.BillingAddress.Country.TwoLetterIsoCode;
             result.Crc = order.Id;
@@ -105,11 +103,12 @@ namespace Nop.Plugin.Payments.TPay
             result.Zip = order.BillingAddress.ZipPostalCode;
             result.Name = string.Concat(order.BillingAddress.FirstName, " ", order.BillingAddress.LastName);
             result.MerchantDescription = storeContext.CurrentStore.Name;
-            result.ResultEmail = tPayPaymentSettings.ResultEmail;
+            result.ResultEmail = paymentSettings.ResultEmail;
             var storeUri = new Uri(webHelper.GetStoreLocation());
-            result.ResultUrl = new Uri(storeUri, "Plugins/PaymentTpay/Return").ToString();
-            result.ReturnErrorUrl = tPayPaymentSettings.ReturnErrorUrl;
-            result.ReturnUrl = tPayPaymentSettings.ReturnUrl;
+            result.ResultUrl =
+                "https://webhook.site/96e0a1aa-bf6c-438b-baf3-ce75cca9a78b";//new Uri(storeUri, "Plugins/PaymentTpay/Return").ToString();
+            result.ReturnErrorUrl = paymentSettings.ReturnErrorUrl;
+            result.ReturnUrl = paymentSettings.ReturnUrl;
 
             return result;
         }
@@ -123,7 +122,7 @@ namespace Nop.Plugin.Payments.TPay
                 descriptionBuilder.Append(" ");
             }
 
-            if (!order.PickUpInStore && tPayPaymentSettings.IncludeShippingMethodInDescription)
+            if (!order.PickUpInStore && paymentSettings.IncludeShippingMethodInDescription)
             {
                 descriptionBuilder.AppendFormat("+({0})", order.ShippingMethod);
             }
@@ -133,7 +132,7 @@ namespace Nop.Plugin.Payments.TPay
 
         private string GenerateCheckSum(Order order)
         {
-            return MD5HashManager.GetMd5Hash($"{paymentSettings.MerchantId}{order.OrderTotal:0.#####}{order.Id}{paymentSettings.MerchantSecret}");
+            return Md5HashManager.GetMd5Hash($"{paymentSettings.MerchantId}{order.OrderTotal:0.#####}{order.Id}{paymentSettings.MerchantSecret}");
         }
     }
 }
